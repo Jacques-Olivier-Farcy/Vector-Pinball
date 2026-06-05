@@ -147,11 +147,11 @@ public class EnterInitialsDialog {
                     slots[i].setText(String.valueOf(ALPHABET[letterIndices[i]]));
                     if (i == activeSlot) {
                         // Case active : vert + souligné
-                        slots[i].setTextColor(Color.parseColor("#00FF00"));
+                        slots[i].setTextColor(Color.WHITE);
                         slots[i].setBackgroundColor(Color.parseColor("#222222"));
                     } else if (i < activeSlot) {
                         // Cases déjà validées : blanc
-                        slots[i].setTextColor(Color.WHITE);
+                        slots[i].setTextColor(Color.YELLOW);
                         slots[i].setBackgroundColor(Color.TRANSPARENT);
                     } else {
                         // Cases pas encore atteintes : gris
