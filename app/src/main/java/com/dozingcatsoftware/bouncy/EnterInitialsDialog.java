@@ -177,19 +177,20 @@ public class EnterInitialsDialog {
         // ✔ Valider la lettre courante, passer à la suivante ou terminer
         btnOk.setOnClickListener(v -> {
             if (activeSlot < 2) {
-                // Passe à la case suivante
                 activeSlot++;
                 updateDisplay.run();
             } else {
-                // Toutes les lettres validées
-                String initials = "" +
-                        ALPHABET[letterIndices[0]] +
-                        ALPHABET[letterIndices[1]] +
-                        ALPHABET[letterIndices[2]];
-                dialogHolder[0].dismiss();
-                callback.onInitialsEntered(initials);
-            }
-        });
+            String initials = "" +
+                ALPHABET[letterIndices[0]] +
+                ALPHABET[letterIndices[1]] +
+                ALPHABET[letterIndices[2]];
+        dialogHolder[0].dismiss();
+        // Exécute le callback sur le thread UI pour éviter le crash
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                callback.onInitialsEntered(initials)
+        );
+    }
+});
 
         dialog.show();
     }
