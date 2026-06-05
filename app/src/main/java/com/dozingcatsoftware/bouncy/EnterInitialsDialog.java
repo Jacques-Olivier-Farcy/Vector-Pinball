@@ -68,7 +68,8 @@ public class EnterInitialsDialog {
         LinearLayout.LayoutParams slotsRowParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        slotsRowParams.bottomMargin = 28;
+        slotsRowParams.topMargin = 24;
+        slotsRowParams.bottomMargin = 24;
         slotsRow.setLayoutParams(slotsRowParams);
 
         TextView[] slots = new TextView[3];
@@ -78,7 +79,7 @@ public class EnterInitialsDialog {
             slot.setTextSize(40);
             slot.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
             slot.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams slotParams = new LinearLayout.LayoutParams(80, 100);
+            LinearLayout.LayoutParams slotParams = new LinearLayout.LayoutParams(80, 160);
             slotParams.setMargins(12, 0, 12, 0);
             slot.setLayoutParams(slotParams);
             slots[i] = slot;
@@ -155,7 +156,7 @@ public class EnterInitialsDialog {
                 .setView(root)
                 .setCancelable(false)
                 .create();
-        dialogHolder[0] = dialog;
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
 
         // ---- Actions des boutons ----
 
