@@ -5,6 +5,7 @@ import java.util.List;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
@@ -23,29 +24,33 @@ import com.dozingcatsoftware.vectorpinball.model.GameState;
 public class ScoreView extends View {
 
     Field field;
+
     Paint textPaint = new Paint();
     Rect textRect = new Rect();
-
     Paint fpsPaint = new Paint();
-
     Paint usedBallPaint = new Paint();
     Paint remainingBallPaint = new Paint();
     Paint multiplierPaint = new Paint();
 
-    List<Long> highScores;
+    int backgroundColor = Color.argb(255, 24, 24, 24);
+    DisplayMetrics metrics = new DisplayMetrics();
+
+    // MODIFIÉ : List<Long> → List<HighScoreEntry>
+    List<HighScoreEntry> highScores;
+
     Long lastUpdateTime;
 
     static final int TOUCH_TO_START_MESSAGE = 0;
     static final int LAST_SCORE_MESSAGE = 1;
     static final int HIGH_SCORE_MESSAGE = 2;
-
     int gameOverMessageIndex = TOUCH_TO_START_MESSAGE;
     int highScoreIndex = 0;
+
     int gameOverMessageCycleTime = 3500;
 
-    double fps;
-    boolean showFPS = false;
-
+    double currentFps;
+    double targetFps;
+    boolean showFps = false;
     String debugMessage = null;
 
     static NumberFormat SCORE_FORMAT = NumberFormat.getInstance();
@@ -54,8 +59,7 @@ public class ScoreView extends View {
         super(context, attrs);
         textPaint.setARGB(255, 255, 255, 0);
         textPaint.setAntiAlias(true);
-        // setTextSize uses absolute pixels, get screen density to scale.
-        DisplayMetrics metrics = new DisplayMetrics();
+
         WindowManager windowManager =
                 (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         windowManager.getDefaultDisplay().getMetrics(metrics);
@@ -72,6 +76,7 @@ public class ScoreView extends View {
         usedBallPaint.setARGB(255, 128, 128, 128);
         usedBallPaint.setStyle(Paint.Style.STROKE);
         usedBallPaint.setAntiAlias(true);
+
         remainingBallPaint.setARGB(255, 224, 224, 224);
         remainingBallPaint.setStyle(Paint.Style.FILL);
         remainingBallPaint.setAntiAlias(true);
@@ -86,8 +91,8 @@ public class ScoreView extends View {
         int currentBall = 0;
         double multiplier = 0;
         long score = 0;
+
         synchronized (field) {
-            // Show custom message if present.
             msg = field.getGameMessage();
             GameState state = field.getGameState();
             gameInProgress = state.isGameInProgress();
@@ -99,11 +104,10 @@ public class ScoreView extends View {
             ballInPlay = field.getBalls().size() > 0;
         }
 
-        c.drawARGB(255, 8, 8, 8);
+        c.drawColor(backgroundColor);
+
         String displayString = (msg != null) ? msg.text : null;
         if (displayString == null) {
-            // Show score if game is in progress, otherwise cycle between
-            // "Touch to start"/previous score/high score.
             if (gameInProgress) {
                 displayString = formatScore(score, unlimitedBalls);
             }
@@ -123,29 +127,32 @@ public class ScoreView extends View {
         int width = this.getWidth();
         int height = this.getHeight();
         textPaint.getTextBounds(displayString, 0, displayString.length(), textRect);
-        // textRect ends up being too high
+
         c.drawText(
                 displayString,
-                width / 2.0f - textRect.width() / 2.0f, height / 2.0f + textRect.height() / 2.0f,
+                width / 2.0f - textRect.width() / 2.0f, height / 2.0f + textRect.height() / 3.0f,
                 textPaint);
-        if (showFPS && fps > 0) {
-            c.drawText(String.format("%.1f fps", fps), width * 0.02f, height * 0.25f, fpsPaint);
+
+        if (showFps && currentFps > 0) {
+            String fpsMessage = String.format("%.1f/%d fps", currentFps, (int) targetFps);
+            c.drawText(fpsMessage, 16 * metrics.density, height * 0.25f, fpsPaint);
         }
+
         if (debugMessage != null) {
             c.drawText(debugMessage, width * 0.02f, height * 0.75f, fpsPaint);
         }
+
         if (gameInProgress) {
-            // Draw balls.
-            int ballPaintWidth = getWidth() / 240;
+            float ballRadius = height / 10f;
+            float ballPaintWidth = ballRadius / 3.2f;
             usedBallPaint.setStrokeWidth(ballPaintWidth);
             remainingBallPaint.setStrokeWidth(ballPaintWidth);
-            float ballRadius = width / 75f;
             float ballOuterMargin = 2 * ballRadius;
             float ballCenterY = height - (ballOuterMargin + ballRadius);
             float ballRightmostCenterX = width - ballOuterMargin - ballRadius;
             float distanceBetweenBallCenters = 2 * ballRadius + ballRadius;
+
             if (unlimitedBalls) {
-                // Attempt to show an "infinite" series of balls getting progressively smaller.
                 float vanishingBallRadius = ballRadius;
                 for (int i = 4; i >= 0; i--) {
                     float ballCenterX = ballRightmostCenterX - (i * distanceBetweenBallCenters);
@@ -156,18 +163,17 @@ public class ScoreView extends View {
             else {
                 for (int i = 0; i < totalBalls; i++) {
                     float ballCenterX = ballRightmostCenterX - (i * distanceBetweenBallCenters);
-                    // "Remove" ball from display when launched.
                     boolean isRemaining = (currentBall + i + (ballInPlay ? 1 : 0) <= totalBalls);
                     c.drawCircle(ballCenterX, ballCenterY, ballRadius,
                             isRemaining ? remainingBallPaint : usedBallPaint);
                 }
             }
-            // Draw multiplier if >1. Use X position of ball third from the right.
+
             if (multiplier > 1) {
                 int intValue = (int) multiplier;
                 String multiplierString = (multiplier == intValue) ?
                         intValue + "x" : String.format("%.2fx", multiplier);
-                float messageStartX = ballRightmostCenterX - 2 * distanceBetweenBallCenters;
+                float messageStartX = ballRightmostCenterX - 2 * distanceBetweenBallCenters - ballRadius;
                 c.drawText(multiplierString, messageStartX, height * 0.4f, multiplierPaint);
             }
         }
@@ -177,28 +183,27 @@ public class ScoreView extends View {
         return System.currentTimeMillis();
     }
 
-    // Cycles to the next message to show when there is not game in progress. This can be
-    // "Touch to start", the last score if available, or one of the previous high scores.
+    // MODIFIÉ : utilise HighScoreEntry au lieu de Long
     void cycleGameOverMessage(long lastScore) {
         switch (gameOverMessageIndex) {
             case TOUCH_TO_START_MESSAGE:
                 if (lastScore > 0) {
                     gameOverMessageIndex = LAST_SCORE_MESSAGE;
                 }
-                else if (highScores.get(0) > 0) {
+                else if (highScores.get(0).score > 0) {
                     gameOverMessageIndex = HIGH_SCORE_MESSAGE;
                     highScoreIndex = 0;
                 }
                 break;
             case LAST_SCORE_MESSAGE:
-                if (highScores.get(0) > 0) {
+                if (highScores.get(0).score > 0) {
                     gameOverMessageIndex = HIGH_SCORE_MESSAGE;
                     highScoreIndex = 0;
                 }
                 break;
             case HIGH_SCORE_MESSAGE:
                 highScoreIndex++;
-                if (highScoreIndex >= highScores.size() || highScores.get(highScoreIndex) <= 0) {
+                if (highScoreIndex >= highScores.size() || highScores.get(highScoreIndex).score <= 0) {
                     highScoreIndex = 0;
                     gameOverMessageIndex = TOUCH_TO_START_MESSAGE;
                 }
@@ -209,7 +214,7 @@ public class ScoreView extends View {
         }
     }
 
-    // Returns message to show when game is not in progress.
+    // MODIFIÉ : affiche "AAA  123 456" dans le cycle des highscores
     String displayedGameOverMessage(long lastScore, boolean unlimitedBalls) {
         switch (gameOverMessageIndex) {
             case TOUCH_TO_START_MESSAGE:
@@ -218,10 +223,9 @@ public class ScoreView extends View {
                 return getContext().getString(
                         R.string.last_score_message, formatScore(lastScore, unlimitedBalls));
             case HIGH_SCORE_MESSAGE:
-                // highScoreIndex could be too high if we just switched from a different table.
                 int index = Math.min(highScoreIndex, this.highScores.size() - 1);
-                // High scores are never recorded when using unlimited balls.
-                String formattedScore = formatScore(this.highScores.get(index), false);
+                HighScoreEntry entry = this.highScores.get(index);
+                String formattedScore = entry.initials + "  " + formatScore(entry.score, false);
                 if (index == 0) {
                     return getContext().getString(R.string.top_high_score_message, formattedScore);
                 }
@@ -244,16 +248,17 @@ public class ScoreView extends View {
         field = value;
     }
 
-    public void setHighScores(List<Long> value) {
+    // MODIFIÉ : accepte List<HighScoreEntry>
+    public void setHighScores(List<HighScoreEntry> value) {
         highScores = value;
     }
 
     public void setFPS(double value) {
-        fps = value;
+        currentFps = value;
     }
 
     public void setShowFPS(boolean value) {
-        showFPS = value;
+        showFps = value;
     }
 
     public void setDebugMessage(String msg) {
