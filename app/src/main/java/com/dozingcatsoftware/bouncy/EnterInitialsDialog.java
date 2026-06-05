@@ -35,7 +35,7 @@ public class EnterInitialsDialog {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(48, 48, 48, 48);
-        root.setBackgroundColor(Color.parseColor("#111111"));
+        root.setBackgroundColor(Color.argb(128, 17, 17, 17));
 
         // Titre
         TextView title = new TextView(context);
@@ -60,20 +60,6 @@ public class EnterInitialsDialog {
         scoreParams.bottomMargin = 24;
         scoreDisplay.setLayoutParams(scoreParams);
         root.addView(scoreDisplay);
-
-        // Instruction
-        TextView instruction = new TextView(context);
-        instruction.setText("◄ LETTRE ►     ✔ VALIDER");
-        instruction.setTextColor(Color.parseColor("#AAAAAA"));
-        instruction.setTextSize(13);
-        instruction.setTypeface(Typeface.MONOSPACE);
-        instruction.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams instrParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        instrParams.bottomMargin = 20;
-        instruction.setLayoutParams(instrParams);
-        root.addView(instruction);
 
         // Les 3 cases de lettres
         LinearLayout slotsRow = new LinearLayout(context);
