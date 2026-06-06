@@ -5,8 +5,6 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -17,21 +15,15 @@ public class EnterInitialsDialog {
         void onInitialsEntered(String initials);
     }
 
-    // L'alphabet disponible : A-Z
     private static final char[] ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-".toCharArray();
 
-    // Position courante dans l'alphabet pour chaque case (0=A, 25=Z)
-    private static int[] letterIndices = {0, 0, 0};
-
-    // Quelle case est en cours d'édition (0, 1 ou 2)
-    private static int activeSlot = 0;
-
     public static void show(Context context, long score, Callback callback) {
-        // Réinitialisation
-        letterIndices = new int[]{0, 0, 0};
-        activeSlot = 0;
+        // Indices courants dans l'alphabet pour chaque case
+        final int[] letterIndices = {0, 0, 0};
+        // Case active
+        final int[] activeSlot = {0};
 
-        // ---- Construction de la vue manuellement ----
+        // ---- Construction de la vue ----
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(48, 48, 48, 48);
@@ -87,7 +79,7 @@ public class EnterInitialsDialog {
         }
         root.addView(slotsRow);
 
-        // Ligne des boutons ◄  ✔  ►
+        // Boutons ◄  ✔  ►
         LinearLayout buttonsRow = new LinearLayout(context);
         buttonsRow.setOrientation(LinearLayout.HORIZONTAL);
         buttonsRow.setGravity(Gravity.CENTER);
@@ -97,8 +89,8 @@ public class EnterInitialsDialog {
         btnLeft.setTextSize(22);
         btnLeft.setTextColor(Color.WHITE);
         btnLeft.setBackgroundColor(Color.parseColor("#333333"));
-        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         btnParams.setMargins(8, 0, 8, 0);
         btnLeft.setLayoutParams(btnParams);
 
@@ -107,8 +99,8 @@ public class EnterInitialsDialog {
         btnOk.setTextSize(22);
         btnOk.setTextColor(Color.parseColor("#00FF00"));
         btnOk.setBackgroundColor(Color.parseColor("#333333"));
-        LinearLayout.LayoutParams btnOkParams = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams btnOkParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         btnOkParams.setMargins(8, 0, 8, 0);
         btnOk.setLayoutParams(btnOkParams);
 
@@ -117,8 +109,8 @@ public class EnterInitialsDialog {
         btnRight.setTextSize(22);
         btnRight.setTextColor(Color.WHITE);
         btnRight.setBackgroundColor(Color.parseColor("#333333"));
-        LinearLayout.LayoutParams btnRightParams = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams btnRightParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         btnRightParams.setMargins(8, 0, 8, 0);
         btnRight.setLayoutParams(btnRightParams);
 
@@ -128,30 +120,24 @@ public class EnterInitialsDialog {
         root.addView(buttonsRow);
 
         // ---- Mise à jour de l'affichage ----
-        Runnable updateDisplay = new Runnable() {
-            @Override public void run() {
-                for (int i = 0; i < 3; i++) {
-                    slots[i].setText(String.valueOf(ALPHABET[letterIndices[i]]));
-                    if (i == activeSlot) {
-                        // Case active : vert + souligné
-                        slots[i].setTextColor(Color.WHITE);
-                        slots[i].setBackgroundColor(Color.parseColor("#222222"));
-                    } else if (i < activeSlot) {
-                        // Cases déjà validées : blanc
-                        slots[i].setTextColor(Color.YELLOW);
-                        slots[i].setBackgroundColor(Color.TRANSPARENT);
-                    } else {
-                        // Cases pas encore atteintes : gris
-                        slots[i].setTextColor(Color.parseColor("#555555"));
-                        slots[i].setBackgroundColor(Color.TRANSPARENT);
-                    }
+        Runnable updateDisplay = () -> {
+            for (int i = 0; i < 3; i++) {
+                slots[i].setText(String.valueOf(ALPHABET[letterIndices[i]]));
+                if (i == activeSlot[0]) {
+                    slots[i].setTextColor(Color.WHITE);
+                    slots[i].setBackgroundColor(Color.parseColor("#222222"));
+                } else if (i < activeSlot[0]) {
+                    slots[i].setTextColor(Color.YELLOW);
+                    slots[i].setBackgroundColor(Color.TRANSPARENT);
+                } else {
+                    slots[i].setTextColor(Color.parseColor("#555555"));
+                    slots[i].setBackgroundColor(Color.TRANSPARENT);
                 }
             }
         };
         updateDisplay.run();
 
         // ---- Création du dialog ----
-        AlertDialog[] dialogHolder = new AlertDialog[1];
         AlertDialog dialog = new AlertDialog.Builder(context)
                 .setView(root)
                 .setCancelable(false)
@@ -159,38 +145,31 @@ public class EnterInitialsDialog {
         dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
 
         // ---- Actions des boutons ----
-
-        // ◄ Lettre précédente (Z → A en boucle)
         btnLeft.setOnClickListener(v -> {
-            letterIndices[activeSlot] =
-                    (letterIndices[activeSlot] - 1 + ALPHABET.length) % ALPHABET.length;
+            letterIndices[activeSlot[0]] =
+                    (letterIndices[activeSlot[0]] - 1 + ALPHABET.length) % ALPHABET.length;
             updateDisplay.run();
         });
 
-        // ► Lettre suivante (Z → A en boucle)
         btnRight.setOnClickListener(v -> {
-            letterIndices[activeSlot] =
-                    (letterIndices[activeSlot] + 1) % ALPHABET.length;
+            letterIndices[activeSlot[0]] =
+                    (letterIndices[activeSlot[0]] + 1) % ALPHABET.length;
             updateDisplay.run();
         });
 
-        // ✔ Valider la lettre courante, passer à la suivante ou terminer
         btnOk.setOnClickListener(v -> {
-            if (activeSlot < 2) {
-                activeSlot++;
+            if (activeSlot[0] < 2) {
+                activeSlot[0]++;
                 updateDisplay.run();
             } else {
-            String initials = "" +
-                ALPHABET[letterIndices[0]] +
-                ALPHABET[letterIndices[1]] +
-                ALPHABET[letterIndices[2]];
-        dialogHolder[0].dismiss();
-        // Exécute le callback sur le thread UI pour éviter le crash
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                callback.onInitialsEntered(initials)
-        );
-    }
-});
+                String initials = "" +
+                        ALPHABET[letterIndices[0]] +
+                        ALPHABET[letterIndices[1]] +
+                        ALPHABET[letterIndices[2]];
+                dialog.dismiss();
+                callback.onInitialsEntered(initials);
+            }
+        });
 
         dialog.show();
     }
